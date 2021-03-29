@@ -9,7 +9,7 @@
           <span class="sr-only">previous</span>
         </button>
       </th>
-      <th colspan="{{::5 + showWeeks}}"><button id="{{::uniqueId}}-title" role="heading" aria-live="assertive" aria-atomic="true" type="button" class="btn btn-secondary btn-sm uib-title" ng-click="toggleMode()" ng-disabled="datepickerMode === maxMode" tabindex="-1"><strong>{{title}}</strong></button></th>
+      <th colspan="{{::labels.length - 2 + showWeeks}}"><button id="{{::uniqueId}}-title" role="heading" aria-live="assertive" aria-atomic="true" type="button" class="btn btn-secondary btn-sm uib-title" ng-click="toggleMode()" ng-disabled="datepickerMode === maxMode" tabindex="-1"><strong>{{title}}</strong></button></th>
       <th>
         <button type="button" class="btn btn-secondary btn-sm float-right uib-right" ng-click="move(1)" tabindex="-1">
           <i aria-hidden="true" class="fa-svg-icon">

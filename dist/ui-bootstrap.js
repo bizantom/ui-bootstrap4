@@ -2,7 +2,7 @@
  * ui-bootstrap4
  * http://morgul.github.io/ui-bootstrap4/
 
- * Version: 3.0.6 - 2018-11-17
+ * Version: 3.0.7 - 2021-03-29
  * License: MIT
  */angular.module("ui.bootstrap", ["ui.bootstrap.collapse","ui.bootstrap.tabindex","ui.bootstrap.accordion","ui.bootstrap.alert","ui.bootstrap.buttons","ui.bootstrap.carousel","ui.bootstrap.common","ui.bootstrap.dateparser","ui.bootstrap.isClass","ui.bootstrap.datepicker","ui.bootstrap.position","ui.bootstrap.datepickerPopup","ui.bootstrap.debounce","ui.bootstrap.multiMap","ui.bootstrap.dropdown","ui.bootstrap.stackedMap","ui.bootstrap.modal","ui.bootstrap.paging","ui.bootstrap.pager","ui.bootstrap.pagination","ui.bootstrap.tooltip","ui.bootstrap.popover","ui.bootstrap.progressbar","ui.bootstrap.rating","ui.bootstrap.tabs","ui.bootstrap.timepicker","ui.bootstrap.typeahead"]);
 angular.module('ui.bootstrap.collapse', [])
@@ -1446,6 +1446,7 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.dateparser', 'ui.bootst
   ngModelOptions: {},
   shortcutPropagation: false,
   showWeeks: true,
+  hideDays:[],
   yearColumns: 5,
   yearRows: 4
 })
@@ -1483,6 +1484,7 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.dateparser', 'ui.bootst
     'minMode',
     'monthColumns',
     'showWeeks',
+    'hideDays',
     'shortcutPropagation',
     'startingDay',
     'yearColumns',
@@ -1512,6 +1514,7 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.dateparser', 'ui.bootst
       case 'shortcutPropagation':
       case 'yearColumns':
       case 'yearRows':
+      case 'hideDays':
         self[key] = angular.isDefined($scope.datepickerOptions[key]) ?
           $scope.datepickerOptions[key] : datepickerConfig[key];
         break;
@@ -1823,14 +1826,18 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.dateparser', 'ui.bootst
   this.init = function(ctrl) {
     angular.extend(ctrl, this);
     scope.showWeeks = ctrl.showWeeks;
+    scope.hideDays = ctrl.hideDays;
     ctrl.refreshView();
   };
 
   this.getDates = function(startDate, n) {
-    var dates = new Array(n), current = new Date(startDate), i = 0, date;
+    var dates = new Array(), current = new Date(startDate), i = 0, date;
     while (i < n) {
       date = new Date(current);
-      dates[i++] = date;
+      if(scope.hideDays.indexOf(date.getDay()) === -1){
+        dates.push(date);
+      }
+      i++;
       current.setDate(current.getDate() + 1);
     }
     return dates;
@@ -1852,25 +1859,27 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.dateparser', 'ui.bootst
       firstDate.setDate(-numDisplayedFromPreviousMonth + 1);
     }
 
+    const days = getDaysToDisplay();
+
     // 42 is the number of days on a six-week calendar
-    var days = this.getDates(firstDate, 42);
-    for (var i = 0; i < 42; i ++) {
-      days[i] = angular.extend(this.createDateObject(days[i], this.formatDay), {
-        secondary: days[i].getMonth() !== month,
+    var dates = this.getDates(firstDate, 42);
+    for (var i = 0; i < days.length * 6; i ++) {
+      dates[i] = angular.extend(this.createDateObject(dates[i], this.formatDay), {
+        secondary: dates[i].getMonth() !== month,
         uid: scope.uniqueId + '-' + i
       });
     }
 
-    scope.labels = new Array(7);
-    for (var j = 0; j < 7; j++) {
+    scope.labels = new Array(days.length);
+    for (var j = 0; j < days.length; j++) {
       scope.labels[j] = {
-        abbr: dateFilter(days[j].date, this.formatDayHeader),
-        full: dateFilter(days[j].date, 'EEEE')
+        abbr: dateFilter(dates[j].date, this.formatDayHeader),
+        full: dateFilter(dates[j].date, 'EEEE')
       };
     }
 
     scope.title = dateFilter(this.activeDate, this.formatDayTitle);
-    scope.rows = this.split(days, 7);
+    scope.rows = this.split(dates, days.length);
 
     if (scope.showWeeks) {
       scope.weekNumbers = [];
@@ -1890,6 +1899,16 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.dateparser', 'ui.bootst
     _date2.setFullYear(date2.getFullYear());
     return _date1 - _date2;
   };
+
+  function getDaysToDisplay() {
+    const days = [];
+    for (var j = 0; j < 7; j++) {
+      if(scope.hideDays.indexOf(j) === -1){
+        days.push(j);
+      }
+    }
+    return days;
+  }
 
   function getISO8601WeekNumber(date) {
     var checkDate = new Date(date);
@@ -3935,6 +3954,7 @@ angular.module('ui.bootstrap.modal', ['ui.bootstrap.multiMap', 'ui.bootstrap.sta
       link: function(scope, element, attrs) {
         element.addClass(attrs.windowTopClass || '');
         scope.size = attrs.size;
+        scope.scrollable = attrs.scrollable === 'true';
 
         scope.close = function(evt) {
           var modal = $modalStack.getTop();
@@ -4258,7 +4278,8 @@ angular.module('ui.bootstrap.modal', ['ui.bootstrap.multiMap', 'ui.bootstrap.sta
           openedClass: modal.openedClass,
           windowTopClass: modal.windowTopClass,
           animation: modal.animation,
-          appendTo: modal.appendTo
+          appendTo: modal.appendTo,
+          scrollable: modal.scrollable
         });
 
         openedClasses.put(modalBodyClass, modalInstance);
@@ -4317,6 +4338,7 @@ angular.module('ui.bootstrap.modal', ['ui.bootstrap.multiMap', 'ui.bootstrap.sta
           'aria-labelledby': modal.ariaLabelledBy,
           'aria-describedby': modal.ariaDescribedBy,
           'size': modal.size,
+          'scrollable': modal.scrollable,
           'index': topModalIndex,
           'animate': 'animate',
           'ng-style': '{\'z-index\': 1050 + $$topModalIndex*10, display: \'block\'}',
@@ -4498,7 +4520,8 @@ angular.module('ui.bootstrap.modal', ['ui.bootstrap.multiMap', 'ui.bootstrap.sta
       options: {
         animation: true,
         backdrop: true, //can also be false or 'static'
-        keyboard: true
+        keyboard: true,
+        scrollable: false
       },
       $get: ['$rootScope', '$q', '$document', '$templateRequest', '$controller', '$uibResolve', '$uibModalStack',
         function ($rootScope, $q, $document, $templateRequest, $controller, $uibResolve, $modalStack) {
@@ -4596,6 +4619,7 @@ angular.module('ui.bootstrap.modal', ['ui.bootstrap.multiMap', 'ui.bootstrap.sta
                   ariaLabelledBy: modalOptions.ariaLabelledBy,
                   ariaDescribedBy: modalOptions.ariaDescribedBy,
                   size: modalOptions.size,
+                  scrollable: modalOptions.scrollable,
                   openedClass: modalOptions.openedClass,
                   appendTo: modalOptions.appendTo
                 };
@@ -5128,7 +5152,8 @@ angular.module('ui.bootstrap.tooltip', ['ui.bootstrap.position', 'ui.bootstrap.s
               if (!positionTimeout) {
                 positionTimeout = $timeout(function() {
                   var placementClasses = $position.parsePlacement(ttScope.placement);
-                  var placement = placementClasses[1] === 'center' ? placementClasses[0] : placementClasses[0] + '-' + placementClasses[1];
+                  var ttPosition = $position.positionElements(element, tooltip, ttScope.placement, appendToBody, true);
+                  var placement = ttPosition.placement;
 				  
                   // need to add classes prior to placement to allow correct tooltip width calculations
                   if (!tooltip.hasClass(placementClasses[0])) {
@@ -5142,7 +5167,6 @@ angular.module('ui.bootstrap.tooltip', ['ui.bootstrap.position', 'ui.bootstrap.s
                   }
                   
                   // Take into account tooltup margins, since boostrap css draws tooltip arrow inside margins
-                  var ttPosition = $position.positionElements(element, tooltip, ttScope.placement, appendToBody, true);
                   var initialHeight = angular.isDefined(tooltip.offsetHeight) ? tooltip.offsetHeight : tooltip.prop('offsetHeight');
                   var elementPos = appendToBody ? $position.offset(element) : $position.position(element);
                   tooltip.css({ top: ttPosition.top + 'px', left: ttPosition.left + 'px' });

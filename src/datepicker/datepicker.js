@@ -20,6 +20,7 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.dateparser', 'ui.bootst
   ngModelOptions: {},
   shortcutPropagation: false,
   showWeeks: true,
+  hideDays:[],
   yearColumns: 5,
   yearRows: 4
 })
@@ -57,6 +58,7 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.dateparser', 'ui.bootst
     'minMode',
     'monthColumns',
     'showWeeks',
+    'hideDays',
     'shortcutPropagation',
     'startingDay',
     'yearColumns',
@@ -86,6 +88,7 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.dateparser', 'ui.bootst
       case 'shortcutPropagation':
       case 'yearColumns':
       case 'yearRows':
+      case 'hideDays':
         self[key] = angular.isDefined($scope.datepickerOptions[key]) ?
           $scope.datepickerOptions[key] : datepickerConfig[key];
         break;
@@ -397,14 +400,18 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.dateparser', 'ui.bootst
   this.init = function(ctrl) {
     angular.extend(ctrl, this);
     scope.showWeeks = ctrl.showWeeks;
+    scope.hideDays = ctrl.hideDays;
     ctrl.refreshView();
   };
 
   this.getDates = function(startDate, n) {
-    var dates = new Array(n), current = new Date(startDate), i = 0, date;
+    var dates = new Array(), current = new Date(startDate), i = 0, date;
     while (i < n) {
       date = new Date(current);
-      dates[i++] = date;
+      if(scope.hideDays.indexOf(date.getDay()) === -1){
+        dates.push(date);
+      }
+      i++;
       current.setDate(current.getDate() + 1);
     }
     return dates;
@@ -426,25 +433,27 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.dateparser', 'ui.bootst
       firstDate.setDate(-numDisplayedFromPreviousMonth + 1);
     }
 
+    const days = getDaysToDisplay();
+
     // 42 is the number of days on a six-week calendar
-    var days = this.getDates(firstDate, 42);
-    for (var i = 0; i < 42; i ++) {
-      days[i] = angular.extend(this.createDateObject(days[i], this.formatDay), {
-        secondary: days[i].getMonth() !== month,
+    var dates = this.getDates(firstDate, 42);
+    for (var i = 0; i < days.length * 6; i ++) {
+      dates[i] = angular.extend(this.createDateObject(dates[i], this.formatDay), {
+        secondary: dates[i].getMonth() !== month,
         uid: scope.uniqueId + '-' + i
       });
     }
 
-    scope.labels = new Array(7);
-    for (var j = 0; j < 7; j++) {
+    scope.labels = new Array(days.length);
+    for (var j = 0; j < days.length; j++) {
       scope.labels[j] = {
-        abbr: dateFilter(days[j].date, this.formatDayHeader),
-        full: dateFilter(days[j].date, 'EEEE')
+        abbr: dateFilter(dates[j].date, this.formatDayHeader),
+        full: dateFilter(dates[j].date, 'EEEE')
       };
     }
 
     scope.title = dateFilter(this.activeDate, this.formatDayTitle);
-    scope.rows = this.split(days, 7);
+    scope.rows = this.split(dates, days.length);
 
     if (scope.showWeeks) {
       scope.weekNumbers = [];
@@ -464,6 +473,16 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.dateparser', 'ui.bootst
     _date2.setFullYear(date2.getFullYear());
     return _date1 - _date2;
   };
+
+  function getDaysToDisplay() {
+    const days = [];
+    for (var j = 0; j < 7; j++) {
+      if(scope.hideDays.indexOf(j) === -1){
+        days.push(j);
+      }
+    }
+    return days;
+  }
 
   function getISO8601WeekNumber(date) {
     var checkDate = new Date(date);
